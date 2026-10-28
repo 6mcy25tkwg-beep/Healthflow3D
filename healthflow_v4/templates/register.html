@@ -1,0 +1,37 @@
+
+{% extends "base.html" %}
+{% block content %}
+
+<div class="auth-container">
+    <div class="auth-card">
+        <div class="auth-icon">✦</div>
+        <h1 data-i18n="register">Register</h1>
+        <p class="muted" data-i18n="registerDesc">
+            Create your personal account.
+        </p>
+
+        <form method="post">
+            <label data-i18n="username">Username</label>
+            <input name="username" type="text"
+                   minlength="3" maxlength="50"
+                   autocomplete="username" required>
+
+            <label data-i18n="password">Password</label>
+            <input name="password" type="password"
+                   minlength="8"
+                   autocomplete="new-password" required>
+
+            <button class="btn full" type="submit" data-i18n="register">
+                Register
+            </button>
+        </form>
+
+        <p class="auth-bottom">
+            <a href="{{ url_for('login') }}" data-i18n="login">
+                Login
+            </a>
+        </p>
+    </div>
+</div>
+
+{% endblock %}

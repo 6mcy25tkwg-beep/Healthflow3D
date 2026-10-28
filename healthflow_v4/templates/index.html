@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block content %}
+
+<section class="hero">
+    <div class="hero-copy">
+        <h1 data-i18n="heroTitle">Your Health, Your Journey.</h1>
+        <p data-i18n="heroDesc">
+            Manage your wellness habits, measurements and daily records in one place.
+        </p>
+        <a class="btn" href="{{ url_for('register') }}" data-i18n="getStarted">
+            Get Started →
+        </a>
+    </div>
+
+    <div class="hero-art" id="heroScene">
+        <canvas aria-label="Rotating 3D wellness orb" role="img"></canvas>
+    </div>
+</section>
+
+<div class="home-features">
+    <div class="card feature feature-bmi">
+        <h3>BMI</h3>
+        <p data-i18n="bmiDesc">Save and review BMI measurements.</p>
+    </div>
+    <div class="card feature feature-habit">
+        <h3>Daily Habits</h3>
+        <p data-i18n="habitsDesc">Track sleep, water and everyday habits.</p>
+    </div>
+    <div class="card feature feature-report">
+        <h3>Weekly Reports</h3>
+        <p data-i18n="reportsDesc">View your weekly records and charts.</p>
+    </div>
+</div>
+
+{% endblock %}

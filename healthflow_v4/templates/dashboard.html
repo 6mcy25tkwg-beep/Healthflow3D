@@ -1,0 +1,552 @@
+
+{% extends "base.html" %}
+{% block content %}
+
+<main class="dashboard">
+
+    <div class="page-heading">
+        <div>
+            <h1><span data-i18n="hello">Hello</span>, {{ session["username"] }}</h1>
+            <p class="muted" data-i18n="dashboardDesc">
+                Your daily health and wellness overview.
+            </p>
+        </div>
+        <div class="date-pill">{{ today }}</div>
+    </div>
+
+    <!-- Overview -->
+    <section class="stats">
+        <div class="stat-card">
+            <span class="stat-symbol">◉</span>
+            <p data-i18n="latestBMI">Latest BMI</p>
+            <h2>{{ latest["bmi"] if latest else "--" }}</h2>
+            {% if latest %}
+            <span class="level-badge lv-{{ bmi_level(latest["bmi"], latest["age"]) }}"
+                  data-i18n="lv_{{ bmi_level(latest["bmi"], latest["age"]) }}">{{ BMI_LEVEL_EN[bmi_level(latest["bmi"], latest["age"])] }}</span>
+            {% else %}
+            <small data-i18n="referenceOnly">Reference only</small>
+            {% endif %}
+        </div>
+
+        <div class="stat-card">
+            <span class="stat-symbol">💧</span>
+            <p data-i18n="waterToday">Water recorded today</p>
+            <h2>{{ water_today }}<span class="goal">/{{ water_goal }}</span></h2>
+            <small data-i18n="glasses">Glasses</small>
+            <button type="button" class="cat-replay" data-type="water" hidden
+                    aria-label="Cat">🐱</button>
+        </div>
+
+        <div class="stat-card">
+            <span class="stat-symbol">🌙</span>
+            <p data-i18n="sleepToday">Sleep recorded today</p>
+            <h2>{{ sleep_today if sleep_today is not none else "--" }}<span class="goal">/{{ sleep_goal_label }}</span></h2>
+            <small data-i18n="hours">Hours</small>
+            <button type="button" class="cat-replay" data-type="sleep" hidden
+                    aria-label="Cat">🐱</button>
+        </div>
+
+        <div class="stat-card">
+            <span class="stat-symbol">✓</span>
+            <p data-i18n="habitsToday">Habits completed today</p>
+            <h2>{{ done_today|length }}/{{ habits|length }}</h2>
+            <small data-i18n="completed">Completed</small>
+        </div>
+    </section>
+
+    <div class="dashboard-columns">
+
+        <!-- Main column -->
+        <div class="content-column">
+
+            <!-- BMI Chart -->
+            <section class="card">
+                <div class="card-title">
+                    <h2 data-i18n="bmiHistory">BMI History</h2>
+                </div>
+                <div class="chart-area">
+                    <canvas id="bmiChart"></canvas>
+                </div>
+            </section>
+
+            <!-- BMI Level -->
+            <section class="card bmi-level-card">
+                <div class="card-title">
+                    <h2 data-i18n="bmiLevel">BMI Level</h2>
+                    {% if level_info %}
+                    <span class="level-badge lv-{{ level_info.key }}"
+                          data-i18n="lv_{{ level_info.key }}">{{ BMI_LEVEL_EN[level_info.key] }}</span>
+                    {% endif %}
+                </div>
+
+                {% if level_info %}
+                <p class="level-now">
+                    <span data-i18n="latestBMI">Latest BMI</span>
+                    <strong>{{ level_info.bmi }}</strong>
+                </p>
+                {% else %}
+                <p class="small-note" data-i18n="levelEmpty">
+                    Save a measurement with the BMI calculator to see your level.
+                </p>
+                {% endif %}
+
+                <div class="bmi-scale">
+                    <div class="bmi-track">
+                        <span class="seg seg-under"></span>
+                        <span class="seg seg-normal"></span>
+                        <span class="seg seg-over"></span>
+                        <span class="seg seg-obese"></span>
+
+                        {% if level_info and level_info.key != "child" %}
+                        <span class="bmi-marker" style="--pos: {{ level_info.marker }}%">
+                            <i>{{ level_info.bmi }}</i>
+                        </span>
+                        {% endif %}
+                    </div>
+                    <div class="bmi-ticks" aria-hidden="true">
+                        <span style="left:14%">18.5</span>
+                        <span style="left:40%">25</span>
+                        <span style="left:60%">30</span>
+                    </div>
+                </div>
+
+                <ul class="level-legend">
+                    {% for key, rng in [("under","rng_under"),("normal","rng_normal"),("over","rng_over"),("obese","rng_obese")] %}
+                    <li class="{% if level_info and level_info.key == key %}is-current{% endif %}">
+                        <span class="legend-dot lv-{{ key }}"></span>
+                        <strong data-i18n="lv_{{ key }}">{{ BMI_LEVEL_EN[key] }}</strong>
+                        <span class="muted" data-i18n="{{ rng }}"></span>
+                    </li>
+                    {% endfor %}
+                </ul>
+
+                {% if level_info and level_info.key == "child" %}
+                <p class="level-child" data-i18n="levelChild">
+                    Adult levels do not apply under age 20. Ask a doctor or school nurse for a BMI-for-age check.
+                </p>
+                {% elif level_info %}
+                <p class="small-note">
+                    <span data-i18n="healthyRange">Normal range for your height</span>:
+                    <strong>{{ level_info.low }} – {{ level_info.high }} kg</strong>
+                </p>
+                {% endif %}
+
+                <p class="small-note" data-i18n="levelNote">
+                    Based on WHO adult categories. BMI is a reference only, not a diagnosis.
+                </p>
+            </section>
+
+            <!-- Water + Sleep -->
+            <div class="two-cards">
+                <section class="card">
+                    <div class="card-title">
+                        <h2 data-i18n="waterTracker">Water Tracker</h2>
+                        <span>💧</span>
+                    </div>
+
+                    <div class="goal-bar" aria-hidden="true">
+                        <span style="width: {{ [ (water_today / water_goal * 100) | round | int, 100 ] | min }}%"></span>
+                    </div>
+                    <p class="small-note goal-note">
+                        <span data-i18n="waterGoal">Daily goal</span>:
+                        {{ water_today }} / {{ water_goal }}
+                    </p>
+
+                    <form method="post" action="{{ url_for('save', kind='water') }}">
+                        <label data-i18n="date">Date</label>
+                        <input type="date" name="entry_date"
+                               value="{{ today }}" max="{{ today }}" required>
+
+                        <label data-i18n="glasses">Glasses</label>
+                        <input type="number" name="glasses"
+                               min="1" max="30" value="1" required>
+
+                        <button class="btn full" data-i18n="saveWater">
+                            Save Water
+                        </button>
+                    </form>
+
+                    <div class="recent-list">
+                        {% for row in water[:5] %}
+                        <div class="recent-item">
+                            <span>{{ row["entry_date"] }} — {{ row["glasses"] }} 🥛</span>
+                            <form method="post"
+                                  action="{{ url_for('delete', kind='water', item_id=row['id']) }}">
+                                <button class="delete-btn" aria-label="Delete">×</button>
+                            </form>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </section>
+
+                <section class="card">
+                    <div class="card-title">
+                        <h2 data-i18n="sleepTracker">Sleep Tracker</h2>
+                        <span>🌙</span>
+                    </div>
+
+                    <div class="goal-bar" aria-hidden="true">
+                        <span style="width: {{ [ ((sleep_today or 0) / sleep_goal * 100) | round | int, 100 ] | min }}%"></span>
+                    </div>
+                    <p class="small-note goal-note">
+                        <span data-i18n="sleepGoal">Daily goal</span>:
+                        {{ sleep_today or 0 }} / {{ sleep_goal_label }}
+                    </p>
+
+                    <form method="post" action="{{ url_for('save', kind='sleep') }}">
+                        <label data-i18n="date">Date</label>
+                        <input type="date" name="entry_date"
+                               value="{{ today }}" max="{{ today }}" required>
+
+                        <label data-i18n="sleepHours">Sleep Hours</label>
+                        <input type="number" name="hours"
+                               min="0" max="24" step="0.5"
+                               placeholder="8" required>
+
+                        <button class="btn full" data-i18n="saveSleep">
+                            Save Sleep
+                        </button>
+                    </form>
+
+                    <div class="recent-list">
+                        {% for row in sleep[:5] %}
+                        <div class="recent-item">
+                            <span>{{ row["entry_date"] }} — {{ row["hours"] }} h</span>
+                            <form method="post"
+                                  action="{{ url_for('delete', kind='sleep', item_id=row['id']) }}">
+                                <button class="delete-btn" aria-label="Delete">×</button>
+                            </form>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </section>
+            </div>
+
+            <!-- Weekly Report -->
+            <section class="card">
+                <div class="card-title">
+                    <h2 data-i18n="weeklyReport">Weekly Health Report</h2>
+                </div>
+
+                <div class="report-summary">
+                    <div>
+                        <small data-i18n="waterEntries">Water recorded</small>
+                        <strong id="weeklyWater">0</strong>
+                    </div>
+                    <div>
+                        <small data-i18n="averageSleep">Average recorded sleep</small>
+                        <strong id="weeklySleep">--</strong>
+                    </div>
+                    <div>
+                        <small data-i18n="habitCompletions">Habit completions</small>
+                        <strong>{{ weekly["habit_count"] }}</strong>
+                    </div>
+                </div>
+
+                <div class="chart-area">
+                    <canvas id="waterChart"></canvas>
+                </div>
+
+                <div class="chart-area">
+                    <canvas id="sleepChart"></canvas>
+                </div>
+            </section>
+
+            <!-- Calendar -->
+            <section class="card" id="calendar">
+                <div class="card-title">
+                    <h2 data-i18n="activityCalendar">Activity Calendar</h2>
+                    <div class="month-nav">
+                        <a class="month-btn" aria-label="Previous month"
+                           href="{{ url_for('dashboard', month=prev_month) }}#calendar">‹</a>
+                        <span class="tag" id="monthLabel"
+                              data-year="{{ cal_year }}"
+                              data-month="{{ cal_month }}">{{ month_label }}</span>
+                        <a class="month-btn" aria-label="Next month"
+                           href="{{ url_for('dashboard', month=next_month) }}#calendar">›</a>
+                        {% if not is_current_month %}
+                        <a class="month-today" data-i18n="todayBtn"
+                           href="{{ url_for('dashboard') }}#calendar">Today</a>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="calendar-grid">
+                    {% for key, label in [("mon","Mon"),("tue","Tue"),("wed","Wed"),("thu","Thu"),("fri","Fri"),("sat","Sat"),("sun","Sun")] %}
+                        <div class="calendar-head" data-i18n="{{ key }}">{{ label }}</div>
+                    {% endfor %}
+
+                    {% for week in calendar_weeks %}
+                        {% for day in week %}
+                            <button type="button"
+                                class="calendar-day
+                                {% if not day.current_month %}outside{% endif %}
+                                {% if day.log %}has-activity{% endif %}
+                                {% if day.today %}is-today{% endif %}"
+                                data-date="{{ day.date }}"
+                                title="{{ day.date }}">
+                                <span class="day-num">{{ day.day }}</span>
+                                <span class="day-dots">
+                                    {% if day.log %}<span class="day-dot dot-log"></span>{% endif %}
+                                    {% if day.note %}<span class="day-dot dot-note"></span>{% endif %}
+                                    {% if day.act %}<span class="day-dot dot-act"></span>{% endif %}
+                                </span>
+                            </button>
+                        {% endfor %}
+                    {% endfor %}
+                </div>
+
+                <p class="small-note" data-i18n="calendarNote">
+                    Tap a date to add notes, activities and habits.
+                </p>
+            </section>
+
+            <!-- BMI Records -->
+            <section class="card">
+                <div class="card-title">
+                    <h2 data-i18n="measurementHistory">Measurement History</h2>
+                </div>
+
+                <div class="table-scroll">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th data-i18n="date">Date</th>
+                                <th data-i18n="age">Age</th>
+                                <th data-i18n="height">Height</th>
+                                <th data-i18n="weight">Weight</th>
+                                <th>BMI</th>
+                                <th data-i18n="levelCol">Level</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for row in records %}
+                            <tr>
+                                <td>{{ row["created_at"] }}</td>
+                                <td>{{ row["age"] }}</td>
+                                <td>{{ row["height"] }}</td>
+                                <td>{{ row["weight"] }}</td>
+                                <td>{{ row["bmi"] }}</td>
+                                <td>
+                                    {% set key = bmi_level(row["bmi"], row["age"]) %}
+                                    <span class="level-badge lv-{{ key }}"
+                                          data-i18n="lv_{{ key }}">{{ BMI_LEVEL_EN[key] }}</span>
+                                </td>
+                                <td>
+                                    <form method="post"
+                                          action="{{ url_for('delete', kind='bmi', item_id=row['id']) }}">
+                                        <button class="delete-btn" data-i18n="delete">Delete</button>
+                                    </form>
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr><td colspan="7" data-i18n="noRecords">No records yet.</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+        </div>
+
+        <!-- Right column -->
+        <aside class="side-column">
+
+            <!-- BMI Calculator -->
+            <section class="calculator-card">
+                <div class="calc-icon">✦</div>
+                <h2 data-i18n="bmiCalculator">BMI Calculator</h2>
+                <p data-i18n="calculatorDesc">
+                    Record a new BMI measurement.
+                </p>
+
+                <form method="post" action="{{ url_for('save', kind='bmi') }}">
+                    <label data-i18n="age">Age</label>
+                    <input type="number" name="age"
+                           min="2" max="120" required>
+
+                    <label data-i18n="height">Height (cm)</label>
+                    <input type="number" name="height"
+                           min="50" max="250" step="0.1" required>
+
+                    <label data-i18n="weight">Weight (kg)</label>
+                    <input type="number" name="weight"
+                           min="5" max="400" step="0.1" required>
+
+                    <button class="calc-button" data-i18n="calculate">
+                        Calculate & Save
+                    </button>
+                </form>
+
+                <p class="disclaimer" data-i18n="bmiDisclaimer">
+                    BMI is not a diagnosis. Under age 20,
+                    age- and sex-specific BMI-for-age
+                    assessment is needed.
+                </p>
+            </section>
+
+            <!-- Habit Planner -->
+            <section class="card">
+                <div class="card-title">
+                    <h2 data-i18n="habitPlanner">Daily Habit Planner</h2>
+                    <span>✓</span>
+                </div>
+
+                <form method="post" action="{{ url_for('save', kind='habit') }}">
+                    <label data-i18n="newHabit">New Habit</label>
+                    <input type="text" name="title"
+                           maxlength="80"
+                           placeholder="Read for 20 minutes"
+                           required>
+                    <button class="btn full" data-i18n="addHabit">
+                        Add Habit
+                    </button>
+                </form>
+
+                <div class="habit-list">
+                    {% for habit in habits %}
+                    <div class="habit-row">
+                        <form method="post"
+                              action="{{ url_for('save', kind='habit_done') }}"
+                              class="habit-check-form">
+                            <input type="hidden" name="habit_id"
+                                   value="{{ habit['id'] }}">
+                            <input type="hidden" name="entry_date"
+                                   value="{{ today }}">
+                            <button class="habit-check {% if habit['id'] in done_today %}checked{% endif %}"
+                                    type="submit"
+                                    aria-label="Toggle completed">
+                                {% if habit["id"] in done_today %}✓{% else %}○{% endif %}
+                            </button>
+                        </form>
+
+                        <span>{{ habit["title"] }}</span>
+
+                        <form method="post"
+                              action="{{ url_for('delete', kind='habit', item_id=habit['id']) }}">
+                            <button class="delete-btn" aria-label="Delete">×</button>
+                        </form>
+                    </div>
+                    {% else %}
+                    <p class="small-note" data-i18n="noHabits">
+                        Add your first daily habit.
+                    </p>
+                    {% endfor %}
+                </div>
+            </section>
+
+            <!-- Food Advice -->
+            <section class="food-card">
+                <div class="card-title">
+                    <h2 data-i18n="foodAdvice">Food Advice</h2>
+                    <span>🥗</span>
+                </div>
+
+                <p class="muted" data-i18n="foodIntro">
+                    Simple ideas for balanced everyday meals.
+                </p>
+
+                <div class="food-item">
+                    <span>🍚</span>
+                    <div>
+                        <strong data-i18n="breakfast">Breakfast</strong>
+                        <p data-i18n="breakfastTip">
+                            Rice or toast, egg or tofu, and fruit.
+                        </p>
+                    </div>
+                </div>
+
+                <div class="food-item">
+                    <span>🍱</span>
+                    <div>
+                        <strong data-i18n="lunch">Lunch</strong>
+                        <p data-i18n="lunchTip">
+                            Rice, fish or beans, and vegetables.
+                        </p>
+                    </div>
+                </div>
+
+                <div class="food-item">
+                    <span>🍲</span>
+                    <div>
+                        <strong data-i18n="dinner">Dinner</strong>
+                        <p data-i18n="dinnerTip">
+                            A varied meal with grains, protein and vegetables.
+                        </p>
+                    </div>
+                </div>
+
+                <p class="small-note" data-i18n="foodNote">
+                    General meal ideas only, not personalized medical advice.
+                </p>
+            </section>
+
+        </aside>
+    </div>
+</main>
+
+<!-- Day panel (opens when a calendar date is tapped) -->
+<div class="day-backdrop" id="dayBackdrop" hidden></div>
+<aside class="day-panel" id="dayPanel" role="dialog" aria-modal="true"
+       aria-labelledby="dayTitle" data-today="{{ today }}" hidden>
+    <header class="day-head">
+        <div>
+            <h2 id="dayTitle"></h2>
+            <div class="day-chips" id="daySummary"></div>
+        </div>
+        <button type="button" class="day-close" id="dayClose" aria-label="Close">×</button>
+    </header>
+
+    <div class="day-body">
+        <p class="day-error" id="dayError" data-i18n="saveError" hidden>
+            Could not save. Please try again.
+        </p>
+
+        <section class="day-section">
+            <h3 data-i18n="dayHabits">Habits</h3>
+            <div id="dayHabits"></div>
+            <p class="small-note" data-i18n="habitsRepeat">Habits repeat every day.</p>
+            <form class="inline-form" id="dayHabitForm">
+                <input type="text" id="dayHabitInput" maxlength="80" required>
+                <button class="btn small" data-i18n="addHabit">Add Habit</button>
+            </form>
+        </section>
+
+        <section class="day-section">
+            <h3 data-i18n="dayActivities">Activities</h3>
+            <div id="dayActivities"></div>
+            <form class="inline-form" id="dayActivityForm">
+                <input type="time" id="dayActivityTime" aria-label="Time">
+                <input type="text" id="dayActivityInput" maxlength="80" required>
+                <button class="btn small" data-i18n="addActivity">Add activity</button>
+            </form>
+        </section>
+
+        <section class="day-section">
+            <h3 data-i18n="dayNotes">Notes</h3>
+            <div id="dayNotes"></div>
+            <form id="dayNoteForm">
+                <textarea id="dayNoteInput" maxlength="500" rows="3" required></textarea>
+                <button class="btn small" data-i18n="addNote">Add note</button>
+            </form>
+        </section>
+    </div>
+</aside>
+
+<script>
+window.healthData = {
+    bmi: {{ bmi_chart | tojson }},
+    weekly: {{ weekly | tojson }}
+};
+window.celebratePreview = {{ preview | tojson }};
+window.celebrateGoal = {{ water_goal }};
+window.celebrateState = {
+    user: {{ session["username"] | tojson }},
+    today: {{ today | tojson }},
+    water: { done: {{ (water_today >= water_goal) | tojson }}, goal: {{ water_goal }} },
+    sleep: { done: {{ ((sleep_today or 0) >= sleep_goal) | tojson }}, goal: {{ sleep_goal }} }
+};
+</script>
+
+{% endblock %}

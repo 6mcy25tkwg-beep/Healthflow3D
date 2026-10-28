@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>HealthFlow | Health Management</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700;800&family=Zen+Maru+Gothic:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <script src="https://cdn.jsdelivr.net/npm/three@0.158.0/build/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+<canvas id="ambientScene" aria-hidden="true"></canvas>
+
+<header class="navbar">
+    <a class="brand" href="{{ url_for('index') }}">
+        <span class="brand-mark"></span>HealthFlow
+    </a>
+
+    <nav class="nav-links">
+        <div class="lang-switch" role="group" aria-label="Language">
+            <button type="button" class="lang-btn" onclick="setLanguage('ja')">日本語</button>
+            <button type="button" class="lang-btn" onclick="setLanguage('en')">English</button>
+        </div>
+
+        {% if session.get('user_id') %}
+            <a href="{{ url_for('dashboard') }}" data-i18n="dashboard">Dashboard</a>
+            <form action="{{ url_for('logout') }}" method="post">
+                <button class="link-btn" data-i18n="logout">Logout</button>
+            </form>
+        {% else %}
+            <a href="{{ url_for('login') }}" data-i18n="login">Login</a>
+            <a class="nav-cta" href="{{ url_for('register') }}" data-i18n="register">Register</a>
+        {% endif %}
+    </nav>
+</header>
+
+{% with messages = get_flashed_messages() %}
+    {% if messages %}
+    <div class="messages">
+        {% for message in messages %}
+        <div class="message">{{ message }}</div>
+        {% endfor %}
+    </div>
+    {% endif %}
+{% endwith %}
+
+{% block content %}{% endblock %}
+
+<script src="{{ url_for('static', filename='js/app.js') }}"></script>
+<script src="{{ url_for('static', filename='js/scene3d.js') }}"></script>
+<script src="{{ url_for('static', filename='js/celebrate.js') }}"></script>
+<script src="{{ url_for('static', filename='js/calendar.js') }}"></script>
+</body>
+</html>

@@ -1,0 +1,35 @@
+
+{% extends "base.html" %}
+{% block content %}
+
+<div class="auth-container">
+    <div class="auth-card">
+        <div class="auth-icon">✦</div>
+        <h1 data-i18n="login">Login</h1>
+        <p class="muted" data-i18n="loginDesc">
+            Welcome back to HealthFlow.
+        </p>
+
+        <form method="post">
+            <label data-i18n="username">Username</label>
+            <input name="username" type="text"
+                   autocomplete="username" required>
+
+            <label data-i18n="password">Password</label>
+            <input name="password" type="password"
+                   autocomplete="current-password" required>
+
+            <button class="btn full" type="submit" data-i18n="login">
+                Login
+            </button>
+        </form>
+
+        <p class="auth-bottom">
+            <a href="{{ url_for('register') }}" data-i18n="register">
+                Create Account
+            </a>
+        </p>
+    </div>
+</div>
+
+{% endblock %}
